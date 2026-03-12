@@ -1,0 +1,63 @@
+Activar el entorno virtual 
+    venv\Scripts\activate
+instalar dependecias
+    pip install customtkinter
+
+
+
+
+codigo de ejemplo 
+
+-------------- CON ERRORES -------------------------
+One $AID89;
+Two $ARRAY9;
+Tree $CINCO;
+
+$CInco = 12.5 + 15;
+$AID89 = 12.21 + 21;
+$ARRAY9 = 15.9 + "CINCO";
+$ARRAY9= 12 + 12.3
+for ($KINCO=0; $KINCO > 10;) {
+}
+------------------ SIN ERRORES -------------------------
+One $limite;
+One $contador;
+Two $pi;
+Tree $mensaje;
+One $i;
+$limite = 10;
+$contador = 0;
+$pi = 3.1416;
+$mensaje = "Ejecucion Exitosa";
+for ($i = 0; $i < $limite; $i = $i + 1) {
+    $contador = $contador + 1;
+}
+
+$pi = $pi + 0.5;
+
+
+------------------------------ Ejemplo de italia ----------------------------------
+One $limite;
+One $contador;
+Two $pi;
+Tree $mensaje;
+One $i;
+$limite = 10;
+$contador = 0;
+$pi = 3.1416;
+$mensaje = "Ejecucion Exitosa";
+One $AAA()
+{
+One $pi;
+Two $pi;
+for ($i = 0; $i < $limite; $i = $i + 1) {
+    $contador = $contador + "222";
+}
+return "uno";
+}
+
+$pi = "0.5";
+$AAA = 8 ;
+$mensaje = $BBB() / 2;
+
+

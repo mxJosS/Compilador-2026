@@ -1,0 +1,9 @@
+Token,Lexema,Renglón,Descripción
+ES1,$pi,12,Variable duplicada
+ES2,$pi,13,Variable duplicada
+ES3,for,14,Función indefinida
+ES4,"""222""",15,"Incompatibilidad de tipos, One (entero)"
+ES5,"""uno""",17,"Incompatibilidad de tipos, One (entero)"
+ES6,"""0.5""",20,"Incompatibilidad de tipos, Two (real)"
+ES7,$BBB,22,Función indefinida
+ES8,2,22,"Incompatibilidad de tipos, Tree (cadena)"
