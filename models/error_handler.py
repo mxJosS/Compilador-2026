@@ -26,6 +26,12 @@ class ErrorHandler:
         
         self.contador += 1
 
+    def sort_errors(self):
+        """Ordena los errores por número de renglón y reasigna tokens ES1, ES2..."""
+        self.errores.sort(key=lambda e: e['Renglón'])
+        for i, e in enumerate(self.errores, 1):
+            e['Token'] = f"ES{i}"
+
     def get_all(self):
         return self.errores
 

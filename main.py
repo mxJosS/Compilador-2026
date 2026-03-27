@@ -92,6 +92,7 @@ class CompiladorApp(ctk.CTk):
         lexer.tokenize(codigo)
         semantic = SemanticAnalyzer(self.st, self.eh)
         semantic.analyze(codigo)
+        self.eh.sort_errors()
         self.actualizar_tablas()
         self.st.export_csv()
         self.eh.export_csv()

@@ -1,4 +1,4 @@
 Token,Lexema,Renglón,Descripción
-ES1,Isa,10,Variable indefinida (sin $)
-ES2,$Opera,7,"Incompatibilidad de tipos, Tree (cadena)"
+ES1,$Opera,7,"Incompatibilidad de tipos, Tree (cadena)"
+ES2,Isa,10,Variable indefinida (sin $)
 ES3,3.1416,11,"Incompatibilidad de tipos, One (entero)"
