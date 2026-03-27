@@ -1,7 +1,20 @@
 Lexema,Tipo de dato
-One,
-$Uno,One
-;,
-$Pene,
+$NoDeclarada,
 =,
-"""Jele""",Tree
+10,One
+;,
+$Resultado,
+$X,
++,
+$Y,
+for,
+(,
+$I,
+0,One
+<,
+5,One
+),
+{,
+$Z,
+1,One
+},

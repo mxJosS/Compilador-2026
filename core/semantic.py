@@ -120,7 +120,6 @@ class SemanticAnalyzer:
                             
                 elif tipo_token == 'ID':
                     tipo_en_tabla = self._obtener_tipo(lexema)
-                    
                     if tipo_declaracion:
                         # Declaración de variable → verificar duplicado SOLO en el scope actual
                         if self._is_declared_in_current_scope(lexema):
@@ -134,7 +133,6 @@ class SemanticAnalyzer:
                         elif hubo_asignacion or hubo_return:
                             # Variable usada en lado derecho → verificar tipo
                             self._verificar_tipo(lexema, id_izquierdo, hubo_return, num_linea, tipo_token)
-                            
                     # Solo actualizamos id_izquierdo si estamos ANTES de la asignación
                     if not hubo_asignacion and not hubo_return:
                         id_izquierdo = lexema

@@ -1,2 +1,7 @@
 Token,Lexema,Renglón,Descripción
-ES1,$Pene,3,Variable indefinida
+ES1,$NoDeclarada,1,Variable indefinida
+ES2,$Resultado,2,Variable indefinida
+ES3,$X,2,Variable indefinida
+ES4,$Y,2,Variable indefinida
+ES5,$I,4,Variable indefinida
+ES6,$Z,5,Variable indefinida
