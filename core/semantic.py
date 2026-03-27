@@ -15,8 +15,9 @@ class SemanticAnalyzer:
             ('REAL', r'\b\d+\.\d+\b'),
             ('ENTERO', r'\b\d+\b'),
             ('TIPO', r'\b(?:One|Two|Tree)\b'),
+            ('FOR', r'\bfor\b'),  # CORRECCIÓN 1: FOR agregado a los patrones
             ('RETURN', r'\breturn\b'),
-            ('FUNC', r'\$?[a-zA-Z_][a-zA-Z0-9_]*(?=\s*\()'),
+            ('FUNC', r'\$[a-zA-Z_][a-zA-Z0-9_]*(?=\s*\()'), # CORRECCIÓN 2: $ estricto
             ('ID', r'\$[A-Za-z0-9]+'),
             ('PALABRA_ERR', r'[a-zA-ZñÑáéíóúÁÉÍÓÚ_][a-zA-ZñÑáéíóúÁÉÍÓÚ0-9_]*'),
             ('ASIGNACION', r'='),
@@ -41,6 +42,9 @@ class SemanticAnalyzer:
                 
                 elif tipo_token == 'RETURN':
                     hubo_return = True
+                    
+                # CORRECCIÓN 3: Eliminado el "elif tipo_token == 'FOR'". 
+                # No necesitamos hacer nada con él en el semántico.
                     
                 elif tipo_token == 'FUNC':
                     if tipo_declaracion:
