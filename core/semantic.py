@@ -4,14 +4,48 @@ class SemanticAnalyzer:
     def __init__(self, symbol_table, error_handler):
         self.st = symbol_table
         self.eh = error_handler
-        self.variables_declaradas = set()
+        # Pila de scopes: cada scope es un set de nombres declarados en ese nivel
+        # scope_stack[0] = global, scope_stack[-1] = scope actual
+        self.scope_stack = [set()]  # Inicia con el scope global
         self.funciones_declaradas = {} 
-        self.funcion_actual = None 
+        self.funcion_actual = None
+        # Para rastrear la apertura de función (entre declaración y '{')
+        self._esperando_llave_funcion = False
+        # Profundidad de llaves dentro de la función para manejar for/if anidados
+        self._brace_depth_funcion = 0
+
+    def _current_scope(self):
+        """Retorna el scope actual (el tope de la pila)."""
+        return self.scope_stack[-1]
+
+    def _is_declared_in_current_scope(self, nombre):
+        """Verifica si un nombre ya fue declarado en el scope actual."""
+        return nombre in self.scope_stack[-1]
+
+    def _is_declared_in_any_scope(self, nombre):
+        """Verifica si un nombre fue declarado en cualquier scope (para uso de variables)."""
+        for scope in self.scope_stack:
+            if nombre in scope:
+                return True
+        return False
+
+    def _declare_in_current_scope(self, nombre):
+        """Declara un nombre en el scope actual."""
+        self.scope_stack[-1].add(nombre)
+
+    def _push_scope(self):
+        """Crea un nuevo scope (al entrar a una función)."""
+        self.scope_stack.append(set())
+
+    def _pop_scope(self):
+        """Elimina el scope actual (al salir de una función). No elimina el global."""
+        if len(self.scope_stack) > 1:
+            self.scope_stack.pop()
 
     def analyze(self, codigo):
         lineas = codigo.split('\n')
         patrones = [
-            ('CADENA', '["\u201c\u201d][^"\u201c\u201d]*["\u201c\u201d]'),
+            ('CADENA', '[""\u201c\u201d][^""\u201c\u201d]*[""\u201c\u201d]'),
             ('REAL', r'\b\d+\.\d+\b'),
             ('ENTERO', r'\b\d+\b'),
             ('TIPO', r'\b(?:One|Two|Tree)\b'),
@@ -21,6 +55,8 @@ class SemanticAnalyzer:
             ('ID', r'\$[A-Za-z0-9]+'),
             ('PALABRA_ERR', r'[a-zA-ZñÑáéíóúÁÉÍÓÚ_][a-zA-ZñÑáéíóúÁÉÍÓÚ0-9_]*'),
             ('ASIGNACION', r'='),
+            ('LLAVE_ABRE', r'\{'),
+            ('LLAVE_CIERRA', r'\}'),
         ]
         regex_unida = '|'.join(f'(?P<{nombre}>{patron})' for nombre, patron in patrones)
 
@@ -42,15 +78,38 @@ class SemanticAnalyzer:
                 
                 elif tipo_token == 'RETURN':
                     hubo_return = True
+
+                elif tipo_token == 'LLAVE_ABRE':
+                    if self._esperando_llave_funcion:
+                        # Entramos al cuerpo de la función → nuevo scope local
+                        self._push_scope()
+                        self._esperando_llave_funcion = False
+                        self._brace_depth_funcion = 1
+                    elif self.funcion_actual:
+                        # Llave de for/if/while DENTRO de la función
+                        self._brace_depth_funcion += 1
+
+                elif tipo_token == 'LLAVE_CIERRA':
+                    if self.funcion_actual:
+                        self._brace_depth_funcion -= 1
+                        if self._brace_depth_funcion == 0:
+                            # Es la llave que cierra la función → salir del scope
+                            self._pop_scope()
+                            self.funcion_actual = None
+                        # Si depth > 0, solo se cierra un for/if anidado
                     
                 elif tipo_token == 'FUNC':
                     if tipo_declaracion:
                         # Declaración de función
-                        if lexema in self.funciones_declaradas or lexema in self.variables_declaradas:
+                        if self._is_declared_in_current_scope(lexema):
+                            self.eh.add(lexema, num_linea, "Variable duplicada")
+                        elif lexema in self.funciones_declaradas:
                             self.eh.add(lexema, num_linea, "Variable duplicada")
                         else:
                             self.funciones_declaradas[lexema] = tipo_declaracion
+                            self._declare_in_current_scope(lexema)
                             self.funcion_actual = lexema
+                            self._esperando_llave_funcion = True
                     else:
                         if lexema not in self.funciones_declaradas:
                             # Función indefinida
@@ -63,14 +122,14 @@ class SemanticAnalyzer:
                     tipo_en_tabla = self._obtener_tipo(lexema)
                     
                     if tipo_declaracion:
-                        # Declaración de variable
-                        if lexema in self.variables_declaradas or lexema in self.funciones_declaradas:
+                        # Declaración de variable → verificar duplicado SOLO en el scope actual
+                        if self._is_declared_in_current_scope(lexema):
                             self.eh.add(lexema, num_linea, "Variable duplicada")
                         else:
-                            self.variables_declaradas.add(lexema)
+                            self._declare_in_current_scope(lexema)
                     else:
-                        if tipo_en_tabla == "":
-                            # Variable indefinida (no fue declarada con tipo)
+                        if not self._is_declared_in_any_scope(lexema) and tipo_en_tabla == "":
+                            # Variable indefinida (no fue declarada en ningún scope)
                             self.eh.add(lexema, num_linea, "Variable indefinida")
                         elif hubo_asignacion or hubo_return:
                             # Variable usada en lado derecho → verificar tipo
