@@ -1,4 +1,7 @@
 Token,Lexema,Renglón,Descripción
-ES1,$Operas,5,Función indefinida
-ES2,“Isa”,10,"Incompatibilidad de tipos, One (entero)"
-ES3,3.1416,11,"Incompatibilidad de tipos, One (entero)"
+ES1,$NoDeclarada,1,Variable indefinida
+ES2,$Resultado,2,Variable indefinida
+ES3,$X,2,Variable indefinida
+ES4,$Y,2,Variable indefinida
+ES5,$I,4,Variable indefinida
+ES6,$Z,5,Variable indefinida
