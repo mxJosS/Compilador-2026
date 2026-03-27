@@ -15,9 +15,9 @@ class SemanticAnalyzer:
             ('REAL', r'\b\d+\.\d+\b'),
             ('ENTERO', r'\b\d+\b'),
             ('TIPO', r'\b(?:One|Two|Tree)\b'),
-            ('FOR', r'\bfor\b'),  # CORRECCIÓN 1: FOR agregado a los patrones
-            ('RETURN', r'\breturn\b'),
-            ('FUNC', r'\$[a-zA-Z_][a-zA-Z0-9_]*(?=\s*\()'), # CORRECCIÓN 2: $ estricto
+            ('FOR', r'\bfor\b'),
+            ('RETURN', r'\b[Rr]eturn\b'),
+            ('FUNC', r'\$[a-zA-Z_][a-zA-Z0-9_]*(?=\s*\()'),
             ('ID', r'\$[A-Za-z0-9]+'),
             ('PALABRA_ERR', r'[a-zA-ZñÑáéíóúÁÉÍÓÚ_][a-zA-ZñÑáéíóúÁÉÍÓÚ0-9_]*'),
             ('ASIGNACION', r'='),
@@ -43,11 +43,9 @@ class SemanticAnalyzer:
                 elif tipo_token == 'RETURN':
                     hubo_return = True
                     
-                # CORRECCIÓN 3: Eliminado el "elif tipo_token == 'FOR'". 
-                # No necesitamos hacer nada con él en el semántico.
-                    
                 elif tipo_token == 'FUNC':
                     if tipo_declaracion:
+                        # Declaración de función
                         if lexema in self.funciones_declaradas or lexema in self.variables_declaradas:
                             self.eh.add(lexema, num_linea, "Variable duplicada")
                         else:
@@ -55,20 +53,30 @@ class SemanticAnalyzer:
                             self.funcion_actual = lexema
                     else:
                         if lexema not in self.funciones_declaradas:
+                            # Función indefinida
                             self.eh.add(lexema, num_linea, "Función indefinida")
+                        elif hubo_asignacion or hubo_return:
+                            # Función usada en lado derecho de asignación o return
+                            self._verificar_tipo(lexema, id_izquierdo, hubo_return, num_linea, tipo_token)
                             
                 elif tipo_token == 'ID':
                     tipo_en_tabla = self._obtener_tipo(lexema)
                     
                     if tipo_declaracion:
+                        # Declaración de variable
                         if lexema in self.variables_declaradas or lexema in self.funciones_declaradas:
                             self.eh.add(lexema, num_linea, "Variable duplicada")
                         else:
                             self.variables_declaradas.add(lexema)
                     else:
                         if tipo_en_tabla == "":
+                            # Variable indefinida (no fue declarada con tipo)
                             self.eh.add(lexema, num_linea, "Variable indefinida")
+                        elif hubo_asignacion or hubo_return:
+                            # Variable usada en lado derecho → verificar tipo
+                            self._verificar_tipo(lexema, id_izquierdo, hubo_return, num_linea, tipo_token)
                             
+                    # Solo actualizamos id_izquierdo si estamos ANTES de la asignación
                     if not hubo_asignacion and not hubo_return:
                         id_izquierdo = lexema
 
@@ -78,31 +86,36 @@ class SemanticAnalyzer:
                 elif tipo_token == 'ASIGNACION':
                     hubo_asignacion = True
                 
-                elif (hubo_asignacion and id_izquierdo) or hubo_return:
-                    tipo_del_id = ""
-                    
-                    if hubo_return:
-                        tipo_del_id = self.funciones_declaradas.get(self.funcion_actual, "")
-                    else:
-                        tipo_del_id = self._obtener_tipo(id_izquierdo)
-                        
-                    tipo_del_valor = ""
-                    
-                    if tipo_token == 'ENTERO': tipo_del_valor = "One"
-                    elif tipo_token == 'REAL': tipo_del_valor = "Two"
-                    elif tipo_token == 'CADENA': tipo_del_valor = "Tree"
-                    elif tipo_token == 'ID': tipo_del_valor = self._obtener_tipo(lexema)
-                    elif tipo_token == 'FUNC': tipo_del_valor = self.funciones_declaradas.get(lexema, "")
-                    
-                    if tipo_del_id and tipo_del_valor and tipo_del_id != tipo_del_valor:
-                        nombres_tipos = {
-                            "One": "One (entero)", 
-                            "Two": "Two (real)", 
-                            "Tree": "Tree (cadena)"
-                        }
-                        tipo_desc = nombres_tipos.get(tipo_del_id, tipo_del_id)
-                        self.eh.add(lexema, num_linea, f"Incompatibilidad de tipos, {tipo_desc}")
-                        hubo_return = False 
+                elif tipo_token in ('ENTERO', 'REAL', 'CADENA'):
+                    # Literales en lado derecho de asignación o return → verificar tipo
+                    if hubo_asignacion or hubo_return:
+                        self._verificar_tipo(lexema, id_izquierdo, hubo_return, num_linea, tipo_token)
+
+    def _verificar_tipo(self, lexema, id_izquierdo, hubo_return, num_linea, tipo_token):
+        """Verifica compatibilidad de tipos entre un valor y la variable/función destino."""
+        tipo_del_id = ""
+        
+        if hubo_return:
+            tipo_del_id = self.funciones_declaradas.get(self.funcion_actual, "")
+        else:
+            tipo_del_id = self._obtener_tipo(id_izquierdo)
+            
+        tipo_del_valor = ""
+        
+        if tipo_token == 'ENTERO': tipo_del_valor = "One"
+        elif tipo_token == 'REAL': tipo_del_valor = "Two"
+        elif tipo_token == 'CADENA': tipo_del_valor = "Tree"
+        elif tipo_token == 'ID': tipo_del_valor = self._obtener_tipo(lexema)
+        elif tipo_token == 'FUNC': tipo_del_valor = self.funciones_declaradas.get(lexema, "")
+        
+        if tipo_del_id and tipo_del_valor and tipo_del_id != tipo_del_valor:
+            nombres_tipos = {
+                "One": "One (entero)", 
+                "Two": "Two (real)", 
+                "Tree": "Tree (cadena)"
+            }
+            tipo_desc = nombres_tipos.get(tipo_del_id, tipo_del_id)
+            self.eh.add(lexema, num_linea, f"Incompatibilidad de tipos, {tipo_desc}")
 
     def _obtener_tipo(self, lexema):
         for sim in self.st.get_all():

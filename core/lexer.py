@@ -13,7 +13,7 @@ class Lexer:
             ('ENTERO', r'\b\d+\b'),
             ('TIPO', r'\b(?:One|Two|Tree)\b'),
             ('FOR', r'\bfor\b'),
-            ('RETURN', r'\breturn\b'), # Agregado para que no sea error
+            ('RETURN', r'\b[Rr]eturn\b'), # Agregado para que no sea error
             ('FUNC', r'\$[a-zA-Z_][a-zA-Z0-9_]*(?=\s*\()'),
             ('ID', r'\$[A-Za-z0-9]+'),
             ('PALABRA_ERR', r'[a-zA-ZñÑáéíóúÁÉÍÓÚ_][a-zA-ZñÑáéíóúÁÉÍÓÚ0-9_]*'),
