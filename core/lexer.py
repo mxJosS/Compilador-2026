@@ -8,7 +8,7 @@ class Lexer:
 
     def tokenize(self, codigo):
         patrones = [
-            ('CADENA', r'\"[^\"]*\"'),
+            ('CADENA', '["\u201c\u201d][^"\u201c\u201d]*["\u201c\u201d]'),
             ('REAL', r'\b\d+\.\d+\b'),
             ('ENTERO', r'\b\d+\b'),
             ('TIPO', r'\b(?:One|Two|Tree)\b'),

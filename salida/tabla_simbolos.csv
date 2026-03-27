@@ -13,7 +13,7 @@ Tree,
 $Msj,Tree
 $Whts,Tree
 $Saludo,Tree
-$Operas,Tree
+$Operas,
 (,
 ),
 {,
@@ -23,5 +23,5 @@ Return,
 =,
 150,One
 +,
-Isa,
+“Isa”,Tree
 3.1416,Two
