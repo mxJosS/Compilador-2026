@@ -1,7 +1,6 @@
 Token,Lexema,Renglón,Descripción
-ES1,$NoDeclarada,1,Variable indefinida
-ES2,$Resultado,2,Variable indefinida
-ES3,$X,2,Variable indefinida
-ES4,$Y,2,Variable indefinida
-ES5,$I,4,Variable indefinida
-ES6,$Z,5,Variable indefinida
+ES1,$pi,14,Variable duplicada
+ES2,"""222""",16,"Incompatibilidad de tipos, One (entero)"
+ES3,"""kk""",16,"Incompatibilidad de tipos, One (entero)"
+ES4,"""uno""",18,"Incompatibilidad de tipos, One (entero)"
+ES5,"""0.5""",21,"Incompatibilidad de tipos, Two (real)"
