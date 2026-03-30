@@ -1,0 +1,8 @@
+Archivos csv
+*.csv
+
+Archivos txt
+*.txt
+
+Archivos pyc
+*.pyc
