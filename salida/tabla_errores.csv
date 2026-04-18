@@ -1,6 +1,8 @@
 Token,Lexema,Renglón,Descripción
-ES1,$pi,14,Variable duplicada
-ES2,"""222""",16,"Incompatibilidad de tipos, One (entero)"
-ES3,"""kk""",16,"Incompatibilidad de tipos, One (entero)"
-ES4,"""uno""",18,"Incompatibilidad de tipos, One (entero)"
-ES5,"""0.5""",21,"Incompatibilidad de tipos, Two (real)"
+ES1,$pi,13,Variable duplicada
+ES2,"""222""",15,"Incompatibilidad de tipos, One (entero)"
+ES3,"""uno""",17,"Incompatibilidad de tipos, One (entero)"
+ES4,"""0.5""",20,"Incompatibilidad de tipos, Two (real)"
+ES5,$AAA,22,"Incompatibilidad de tipos, Tree (cadena)"
+ES6,$pe,22,Variable indefinida
+ES7,$yoyo,22,Variable indefinida

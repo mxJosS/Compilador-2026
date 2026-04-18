@@ -8,7 +8,6 @@ $pi,Two
 Tree,
 $mensaje,Tree
 $i,One
-$LUISESPUTO,Tree
 =,
 10,One
 0,One
@@ -16,6 +15,9 @@ $LUISESPUTO,Tree
 """Ejecucion Exitosa""",Tree
 $AAA,One
 (,
+$po,One
+",",
+$yisus,Tree
 ),
 {,
 for,
@@ -23,11 +25,10 @@ for,
 +,
 1,One
 """222""",Tree
-/,
-"""kk""",Tree
 },
 return,
 """uno""",Tree
 """0.5""",Tree
 8,One
-"""HOLA""",Tree
+$pe,
+$yoyo,
