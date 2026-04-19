@@ -80,3 +80,5 @@ class Lexer:
                     self.st.add(lexema, "Two") 
                 elif tipo_token == 'CADENA':
                     self.st.add(lexema, "Tree")
+        
+        return self.tokens

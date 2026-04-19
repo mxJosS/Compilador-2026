@@ -210,6 +210,7 @@ class Parser:
         self.advance()  # Consume WHILE/WHILE_ES
         self.match_lexema("(")
 
+        self.triplos.reset_temps()
         inicio_condicion = self.triplos.current_line()
         saltos_true, saltos_false = [], []
 
@@ -217,6 +218,7 @@ class Parser:
         self.procesar_comparacion(saltos_true, saltos_false)
         while self.current_token and self.current_token.get("tipo") == "OP_LOG":
             self.advance()
+            self.triplos.reset_temps()
             self.procesar_comparacion(saltos_true, saltos_false)
 
         self.match_lexema(")")
@@ -263,12 +265,14 @@ class Parser:
 
         self.match_lexema("(")
 
+        self.triplos.reset_temps()
         saltos_true, saltos_false = [], []
 
         # Evaluar condición
         self.procesar_comparacion(saltos_true, saltos_false)
         while self.current_token and self.current_token.get("tipo") == "OP_LOG":
             self.advance()
+            self.triplos.reset_temps()
             self.procesar_comparacion(saltos_true, saltos_false)
 
         self.match_lexema(")")
@@ -288,12 +292,14 @@ class Parser:
         self.advance()  # Consume IF
         self.match_lexema("(")
 
+        self.triplos.reset_temps()
         saltos_true, saltos_false = [], []
 
         # Evaluar condición
         self.procesar_comparacion(saltos_true, saltos_false)
         while self.current_token and self.current_token.get("tipo") == "OP_LOG":
             self.advance()
+            self.triplos.reset_temps()
             self.procesar_comparacion(saltos_true, saltos_false)
 
         self.match_lexema(")")
@@ -399,11 +405,8 @@ class Parser:
                 for i, arg in enumerate(args):
                     if i < len(params):
                         param_name = params[i]
-                        if arg and not str(arg).startswith("T"):
-                            t_asig = self.triplos.new_temp()
-                            self.triplos.add_triplo(t_asig, arg, "=")
-                            self.triplos.add_triplo(param_name, t_asig, "=")
-                        elif arg:
+                        # Asignar directamente sin temporales intermedios
+                        if arg:
                             self.triplos.add_triplo(param_name, arg, "=")
 
                 t_val = self.triplos.new_temp()

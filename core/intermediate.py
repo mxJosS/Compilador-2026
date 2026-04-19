@@ -29,12 +29,21 @@ class TriploGenerator:
     def update_jump(self, line_index, target_line):
         """
         Parchea la línea a la que debe saltar.
-        El Operador ya se definió como TRUE, FALSE o JMP al crear el espacio pendiente.
-        Solo actualizamos la columna Fuente con la línea destino.
+        Para TRUE/FALSE: Fuente tiene TRUE/FALSE, Operador tiene el número de salto
+        Para JMP: Fuente tiene el número de salto, Operador tiene JMP
         """
         if 0 < line_index <= len(self.triplos):
-            self.triplos[line_index - 1]["Objeto"] = "VACÍO"
-            self.triplos[line_index - 1]["Fuente"] = target_line
+            triplo = self.triplos[line_index - 1]
+            triplo["Objeto"] = "VACÍO"
+            
+            # Si el Operador es TRUE o FALSE, intercambiar: poner TRUE/FALSE en Fuente y número en Operador
+            if triplo["Operador"] in ["TRUE", "FALSE"]:
+                fuente_actual = triplo["Operador"]  # TRUE o FALSE
+                triplo["Fuente"] = fuente_actual
+                triplo["Operador"] = str(target_line)
+            else:
+                # Para JMP, poner el número en Fuente
+                triplo["Fuente"] = target_line
 
     def clear(self):
         self.triplos = []
