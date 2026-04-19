@@ -7,6 +7,8 @@ class Parser:
         self.pos = 0
         self.current_token = self.tokens[self.pos] if self.tokens else None
         self.return_jumps = []
+        # Diccionario para guardar parámetros de funciones: {nombre_func: [lista_parametros]}
+        self.func_params = {}
 
     def advance(self):
         self.pos += 1
@@ -60,12 +62,22 @@ class Parser:
 
         # Si es función (ej. One $AAA(...) { ... })
         if self.current_token and self.current_token.get("tipo") == "FUNC":
+            func_name = self.current_token.get("lexema")
             self.advance()
             if self.match_lexema("("):
-                # Consumir parámetros
+                # Extraer parámetros de la función
+                params = []
                 while self.current_token and self.current_token.get("lexema") != ")":
-                    self.advance()
+                    if self.current_token.get("tipo") in ["TIPO", "ID"]:
+                        if self.current_token.get("tipo") == "ID":
+                            params.append(self.current_token.get("lexema"))
+                        self.advance()
+                    else:
+                        self.advance()
                 self.match_lexema(")")
+
+                # Guardar parámetros de la función
+                self.func_params[func_name] = params
 
                 # Salto JMP para brincar la función
                 salto_func = self.triplos.current_line()
@@ -380,10 +392,19 @@ class Parser:
                         args.append(self.expresion())
                 self.match_lexema(")")
 
-                # Generar los triplos PARAM (estándar en código intermedio)
-                for arg in args:
-                    if arg:
-                        self.triplos.add_triplo("PARAM", arg, "")
+                # Obtener parámetros formales de la función
+                params = self.func_params.get(lexema, [])
+
+                # Generar asignaciones directas a los parámetros formales
+                for i, arg in enumerate(args):
+                    if i < len(params):
+                        param_name = params[i]
+                        if arg and not str(arg).startswith("T"):
+                            t_asig = self.triplos.new_temp()
+                            self.triplos.add_triplo(t_asig, arg, "=")
+                            self.triplos.add_triplo(param_name, t_asig, "=")
+                        elif arg:
+                            self.triplos.add_triplo(param_name, arg, "=")
 
                 t_val = self.triplos.new_temp()
                 self.triplos.add_triplo(t_val, lexema, "CALL")
