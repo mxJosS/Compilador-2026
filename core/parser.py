@@ -34,8 +34,8 @@ class Parser:
 
     def statement(self):
         if not self.current_token: return
-        self.triplos.reset_temps() 
-        
+        self.triplos.reset_temps()
+
         tipo = self.current_token.get("tipo")
 
         if tipo == "TIPO":
@@ -44,36 +44,38 @@ class Parser:
             self.asignacion_o_llamada()
         elif tipo == "FOR":
             self.ciclo_for()
+        elif tipo == "DO":
+            self.ciclo_dowhile()
+        elif tipo == "WHILE" or tipo == "WHILE_ES":
+            self.ciclo_while()
+        elif tipo == "IF":
+            self.condicional_if()
         elif tipo == "RETURN":
             self.retorno()
         else:
             self.advance()
 
     def declaracion(self):
-        self.advance() 
-        if self.current_token and self.current_token.get("lexema") == "=":
-            self.advance() 
+        self.advance()  # Consume el tipo (One/Two/Tree)
 
         # Si es función (ej. One $AAA(...) { ... })
-        if self.current_token and (self.current_token.get("lexema") == "funtion" or self.current_token.get("tipo") == "FUNC"):
+        if self.current_token and self.current_token.get("tipo") == "FUNC":
             self.advance()
             if self.match_lexema("("):
-                
-                # --- CORRECCIÓN 1: Consumir parámetros de la declaración sin crashear ---
+                # Consumir parámetros
                 while self.current_token and self.current_token.get("lexema") != ")":
                     self.advance()
                 self.match_lexema(")")
-                
+
                 # Salto JMP para brincar la función
                 salto_func = self.triplos.current_line()
                 self.triplos.add_triplo("VACÍO", "PENDIENTE", "JMP")
-                
+
                 if self.match_lexema("{"):
                     while self.current_token and self.current_token.get("lexema") != "}":
                         self.statement()
                     self.match_lexema("}")
-                
-                # Actualiza el salto al final de la función y los Returns
+
                 fin_func = self.triplos.current_line()
                 self.triplos.update_jump(salto_func, fin_func)
                 for r_jump in self.return_jumps:
@@ -81,9 +83,30 @@ class Parser:
                 self.return_jumps = []
             return
 
-        # Si es una lista de variables
+        # Declaración múltiple: One $a, $b, $c = 3;
         while self.current_token and self.current_token.get("lexema") != ";":
-            self.advance()
+            if self.current_token.get("tipo") == "ID":
+                var_name = self.current_token.get("lexema")
+                self.advance()
+
+                # Verificar si hay asignación
+                if self.match_lexema("="):
+                    self.triplos.reset_temps()
+                    temp_result = self.expresion()
+                    if temp_result:
+                        if not str(temp_result).startswith("T"):
+                            t_asig = self.triplos.new_temp()
+                            self.triplos.add_triplo(t_asig, temp_result, "=")
+                            self.triplos.add_triplo(var_name, t_asig, "=")
+                        else:
+                            self.triplos.add_triplo(var_name, temp_result, "=")
+
+                # Si hay coma, continuar con la siguiente variable
+                if self.match_lexema(","):
+                    continue
+            else:
+                self.advance()
+
         self.match_lexema(";")
 
     def asignacion_o_llamada(self):
@@ -167,7 +190,122 @@ class Parser:
         self.triplos.add_triplo("VACÍO", inicio_condicion, "JMP")
         
         salida = self.triplos.current_line()
-        for linea in saltos_false: 
+        for linea in saltos_false:
+            self.triplos.update_jump(linea, salida)
+
+    def ciclo_while(self):
+        """Procesa ciclos WHILE: MIENTRAS (cond) { cuerpo }"""
+        self.advance()  # Consume WHILE/WHILE_ES
+        self.match_lexema("(")
+
+        inicio_condicion = self.triplos.current_line()
+        saltos_true, saltos_false = [], []
+
+        # Evaluar condición
+        self.procesar_comparacion(saltos_true, saltos_false)
+        while self.current_token and self.current_token.get("tipo") == "OP_LOG":
+            self.advance()
+            self.procesar_comparacion(saltos_true, saltos_false)
+
+        self.match_lexema(")")
+
+        # Backpatch TRUE: el bloque inicia aquí
+        inicio_bloque = self.triplos.current_line()
+        for linea in saltos_true:
+            self.triplos.update_jump(linea, inicio_bloque)
+
+        # Procesar cuerpo
+        if self.match_lexema("{"):
+            while self.current_token and self.current_token.get("lexema") != "}":
+                self.statement()
+            self.match_lexema("}")
+        else:
+            self.statement()
+
+        # Salto incondicional al inicio de la condición
+        self.triplos.add_triplo("VACÍO", inicio_condicion, "JMP")
+
+        # Backpatch FALSE: salida del while
+        salida = self.triplos.current_line()
+        for linea in saltos_false:
+            self.triplos.update_jump(linea, salida)
+
+    def ciclo_dowhile(self):
+        """Procesa ciclos DO-WHILE: HACER { cuerpo } MIENTRAS (cond)"""
+        self.advance()  # Consume DO
+
+        # Guardar posición del inicio del cuerpo (para el salto del WHILE)
+        inicio_cuerpo = self.triplos.current_line()
+
+        # Procesar cuerpo del DO
+        if self.match_lexema("{"):
+            while self.current_token and self.current_token.get("lexema") != "}":
+                self.statement()
+            self.match_lexema("}")
+        else:
+            self.statement()
+
+        # Ahora viene el WHILE (cond)
+        if self.current_token and self.current_token.get("tipo") in ["WHILE", "WHILE_ES"]:
+            self.advance()  # Consume WHILE
+
+        self.match_lexema("(")
+
+        saltos_true, saltos_false = [], []
+
+        # Evaluar condición
+        self.procesar_comparacion(saltos_true, saltos_false)
+        while self.current_token and self.current_token.get("tipo") == "OP_LOG":
+            self.advance()
+            self.procesar_comparacion(saltos_true, saltos_false)
+
+        self.match_lexema(")")
+        self.match_lexema(";")  # Opcional al final
+
+        # Backpatch TRUE: volver al inicio del cuerpo
+        for linea in saltos_true:
+            self.triplos.update_jump(linea, inicio_cuerpo)
+
+        # FALSE: continuar después del do-while
+        salida = self.triplos.current_line()
+        for linea in saltos_false:
+            self.triplos.update_jump(linea, salida)
+
+    def condicional_if(self):
+        """Procesa condicionales IF: SI (cond) ENTONCES { cuerpo }"""
+        self.advance()  # Consume IF
+        self.match_lexema("(")
+
+        saltos_true, saltos_false = [], []
+
+        # Evaluar condición
+        self.procesar_comparacion(saltos_true, saltos_false)
+        while self.current_token and self.current_token.get("tipo") == "OP_LOG":
+            self.advance()
+            self.procesar_comparacion(saltos_true, saltos_false)
+
+        self.match_lexema(")")
+
+        # Consumir ENTONCES (opcional)
+        if self.current_token and self.current_token.get("tipo") == "THEN":
+            self.advance()
+
+        # Backpatch TRUE: el bloque inicia aquí
+        inicio_bloque = self.triplos.current_line()
+        for linea in saltos_true:
+            self.triplos.update_jump(linea, inicio_bloque)
+
+        # Procesar cuerpo del IF
+        if self.match_lexema("{"):
+            while self.current_token and self.current_token.get("lexema") != "}":
+                self.statement()
+            self.match_lexema("}")
+        else:
+            self.statement()
+
+        # Backpatch FALSE: salida del if (después del bloque)
+        salida = self.triplos.current_line()
+        for linea in saltos_false:
             self.triplos.update_jump(linea, salida)
 
     def procesar_comparacion(self, saltos_true, saltos_false):
@@ -227,12 +365,13 @@ class Parser:
         tipo = self.current_token.get("tipo")
         lexema = self.current_token.get("lexema")
 
-        if tipo in ["ID", "ENTERO", "REAL", "CADENA"]:
+        if tipo in ["ID", "FUNC", "ENTERO", "REAL", "CADENA"]:
             self.advance()
-            if self.current_token and self.current_token.get("lexema") == "(": 
+            # Verificar si es llamada a función: ID seguido de (
+            if self.current_token and self.current_token.get("lexema") == "(":
                 self.advance()
-                
-                # --- CORRECCIÓN 2: Extraer argumentos para llamadas a función ---
+
+                # Extraer argumentos para llamadas a función
                 args = []
                 if self.current_token and self.current_token.get("lexema") != ")":
                     args.append(self.expresion())
@@ -240,12 +379,12 @@ class Parser:
                         self.advance()
                         args.append(self.expresion())
                 self.match_lexema(")")
-                
+
                 # Generar los triplos PARAM (estándar en código intermedio)
                 for arg in args:
                     if arg:
                         self.triplos.add_triplo("PARAM", arg, "")
-                
+
                 t_val = self.triplos.new_temp()
                 self.triplos.add_triplo(t_val, lexema, "CALL")
                 return t_val

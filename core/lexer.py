@@ -14,8 +14,14 @@ class Lexer:
             ('REAL', r'\b\d+\.\d+\b'),
             ('ENTERO', r'\b\d+\b'),
             ('TIPO', r'\b(?:One|Two|Tree)\b'),
-            ('FOR', r'\bfor\b'),
-            ('RETURN', r'\b[Rr]eturn\b'),
+            ('DO', r'\b[Dd]o\b'),
+            ('WHILE', r'\b[Ww]hile\b'),
+            ('FOR', r'\b(?:for|For|PARA|Para)\b'),
+            ('WHILE_ES', r'\b(?:MIENTRAS|Mientras|mientras)\b'),
+            ('IF', r'\b(?:SI|Si|si)\b'),
+            ('THEN', r'\b(?:ENTONCES|Entonces|entonces)\b'),
+            ('DO_ES', r'\b(?:HACER|Hacer|hacer)\b'),
+            ('RETURN', r'\b(?:[Rr]eturn|[Rr]eturn)\b'),
             ('FUNC', r'\$[a-zA-Z_][a-zA-Z0-9_]*(?=\s*\()'),
             ('ID', r'\$[A-Za-z0-9]+'),
             ('PALABRA_ERR', r'[a-zA-ZñÑáéíóúÁÉÍÓÚ_][a-zA-ZñÑáéíóúÁÉÍÓÚ0-9_]*'),
@@ -59,8 +65,12 @@ class Lexer:
                     tipo_a_guardar = f"{tipo_actual}" if tipo_actual else ""
                     self.st.add(lexema, tipo_a_guardar)
                 elif tipo_token == 'PALABRA_ERR':
-                    self.st.add(lexema, "")
-                    self.eh.add(lexema, num_linea, "Variable indefinida (sin $)")
+                    # Verificar si es una palabra clave que no fue reconoccida
+                    if lexema.lower() in ['do', 'while', 'for', 'si', 'entonces', 'hacer', 'mientras', 'para']:
+                        pass  # Es palabra clave, no agregar como error
+                    else:
+                        self.st.add(lexema, "")
+                        self.eh.add(lexema, num_linea, "Variable indefinida (sin $)")
                 elif tipo_token == 'ID':
                     tipo_a_guardar = f"{tipo_actual}" if tipo_actual else ""
                     self.st.add(lexema, tipo_a_guardar)
