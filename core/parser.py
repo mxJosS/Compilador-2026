@@ -401,14 +401,19 @@ class Parser:
                 # Obtener parámetros formales de la función
                 params = self.func_params.get(lexema, [])
 
-                # Generar asignaciones directas a los parámetros formales
+                # Generar asignaciones a través de temporales, reutilizando T1
                 for i, arg in enumerate(args):
                     if i < len(params):
                         param_name = params[i]
-                        # Asignar directamente sin temporales intermedios
+                        # Cada argumento debe pasar por un temporal T1 (reutilizado)
                         if arg:
-                            self.triplos.add_triplo(param_name, arg, "=")
+                            self.triplos.reset_temps()
+                            t_param = self.triplos.new_temp()
+                            self.triplos.add_triplo(t_param, arg, "=")
+                            self.triplos.add_triplo(param_name, t_param, "=")
 
+                # Resetear temps antes del CALL para usar T1
+                self.triplos.reset_temps()
                 t_val = self.triplos.new_temp()
                 self.triplos.add_triplo(t_val, lexema, "CALL")
                 return t_val
@@ -425,13 +430,8 @@ class Parser:
         self.advance()
         res = self.expresion()
         
-        if res:
-            if not str(res).startswith("T"):
-                t_ret = self.triplos.new_temp()
-                self.triplos.add_triplo(t_ret, res, "=")
-                self.triplos.add_triplo("RET", t_ret, "=")
-            else:
-                self.triplos.add_triplo("RET", res, "=")
+        # Marcar que hay un return, para ser procesado en update_jump
+        # No se generan triplos de asignación, el JMP se maneja en fin de función
                 
         if self.current_token and self.current_token.get("lexema") == ";":
             self.advance()
