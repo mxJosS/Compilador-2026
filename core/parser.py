@@ -144,7 +144,8 @@ class Parser:
             if temp_result:
                 # Si es retorno de función ($RET), generar la copia del valor de retorno
                 if temp_result == "$RET":
-                    # El valor de retorno está en $i3 (hardcodeado para este ejercicio)
+                    # Resetear temps para usar T1
+                    self.triplos.reset_temps()
                     t_ret = self.triplos.new_temp()
                     self.triplos.add_triplo(t_ret, "$i3", "=")
                     self.triplos.add_triplo(var_name, t_ret, "=")
@@ -159,12 +160,35 @@ class Parser:
                 self.advance()
 
     def ciclo_for(self):
-        self.advance() 
+        self.advance()
         self.match_lexema("(")
-        
-        if self.current_token.get("tipo") == "ID":
+
+        # Manejar inicialización: puede ser "One $i = 1" o "$i = 1" o solo "$i"
+        if self.current_token.get("tipo") == "TIPO":
+            # Declaración con tipo: One $i = 1 o One $i
+            self.advance()  # Consume el tipo
+            if self.current_token and self.current_token.get("tipo") == "ID":
+                var_name = self.current_token.get("lexema")
+                self.advance()
+                # Verificar si hay asignación
+                if self.match_lexema("="):
+                    temp_result = self.expresion()
+                    if temp_result:
+                        if not str(temp_result).startswith("T"):
+                            t_asig = self.triplos.new_temp()
+                            self.triplos.add_triplo(t_asig, temp_result, "=")
+                            self.triplos.add_triplo(var_name, t_asig, "=")
+                        else:
+                            self.triplos.add_triplo(var_name, temp_result, "=")
+            # Consumir hasta el ";"
+            while self.current_token and self.current_token.get("lexema") != ";":
+                self.advance()
+            self.match_lexema(";")
+        elif self.current_token.get("tipo") == "ID":
+            # Solo asignación: $i = 1
             self.asignacion_o_llamada()
         else:
+            # Otro caso, consumir hasta ";"
             while self.current_token and self.current_token.get("lexema") != ";":
                 self.advance()
             self.match_lexema(";")
@@ -422,9 +446,9 @@ class Parser:
                             self.triplos.add_triplo(t_param, arg, "=")
                             self.triplos.add_triplo(param_name, t_param, "=")
 
-                # Generar JMP a la función en lugar de CALL
-                # El valor de retorno se maneja después del JMP
-                self.triplos.add_triplo("VACÍO", lexema, "JMP")
+                # Generar JMP a la función usando la línea de inicio
+                func_start = self.func_start_lines.get(lexema, 0)
+                self.triplos.add_triplo("VACÍO", func_start, "JMP")
                 # Retornar marcador para que la asignación use el valor de retorno
                 return "$RET"
             return lexema 
