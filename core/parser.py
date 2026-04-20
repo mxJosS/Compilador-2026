@@ -11,6 +11,10 @@ class Parser:
         self.func_params = {}
         # Diccionario para guardar línea de inicio de funciones: {nombre_func: línea}
         self.func_start_lines = {}
+        # Variable de retorno de cada función: {nombre_func: var_retorno}
+        self.func_return_vars = {}
+        # Función que se está parseando actualmente
+        self.current_func = None
 
     def advance(self):
         self.pos += 1
@@ -65,6 +69,7 @@ class Parser:
         # Si es función (ej. One $AAA(...) { ... })
         if self.current_token and self.current_token.get("tipo") == "FUNC":
             func_name = self.current_token.get("lexema")
+            self.current_func = func_name
             self.advance()
             if self.match_lexema("("):
                 # Extraer parámetros de la función
@@ -113,9 +118,10 @@ class Parser:
                         # Si es retorno de función, usar el nombre de la función como fuente
                         if isinstance(temp_result, tuple) and temp_result[0] == "FUNC_RET":
                             func_name = temp_result[1]
+                            ret_var = self.func_return_vars.get(func_name, func_name)
                             self.triplos.reset_temps()
                             t_ret = self.triplos.new_temp()
-                            self.triplos.add_triplo(t_ret, func_name, "=")
+                            self.triplos.add_triplo(t_ret, ret_var, "=")
                             self.triplos.add_triplo(var_name, t_ret, "=")
                         elif not str(temp_result).startswith("T"):
                             t_asig = self.triplos.new_temp()
@@ -152,10 +158,11 @@ class Parser:
                 # Si es retorno de función, usar el nombre de la función como fuente
                 if isinstance(temp_result, tuple) and temp_result[0] == "FUNC_RET":
                     func_name = temp_result[1]
+                    ret_var = self.func_return_vars.get(func_name, func_name)
                     # Resetear temps para usar T1
                     self.triplos.reset_temps()
                     t_ret = self.triplos.new_temp()
-                    self.triplos.add_triplo(t_ret, func_name, "=")
+                    self.triplos.add_triplo(t_ret, ret_var, "=")
                     self.triplos.add_triplo(var_name, t_ret, "=")
                 elif not str(temp_result).startswith("T"):
                     t_asig = self.triplos.new_temp()
@@ -480,8 +487,9 @@ class Parser:
         self.advance()
         res = self.expresion()
         
-        # Marcar que hay un return, para ser procesado en update_jump
-        # No se generan triplos de asignación, el JMP se maneja en fin de función
+        # Guardar la variable de retorno asociada a la función actual
+        if self.current_func and res:
+            self.func_return_vars[self.current_func] = res
                 
         if self.current_token and self.current_token.get("lexema") == ";":
             self.advance()

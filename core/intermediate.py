@@ -114,6 +114,12 @@ class Parser:
 
     def declaracion(self):
         self.advance() # Consume One/Two/Tree
+        
+        # Si es asignación de variable (One $Res = ...)
+        if self.current_token and self.current_token.get("tipo") == "ID":
+            self.asignacion_o_llamada()
+            return
+
         if self.current_token and self.current_token.get("lexema") == "=":
             self.advance() 
 
