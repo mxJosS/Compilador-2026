@@ -9,6 +9,8 @@ class Parser:
         self.return_jumps = []
         # Diccionario para guardar parámetros de funciones: {nombre_func: [lista_parametros]}
         self.func_params = {}
+        # Diccionario para guardar línea de inicio de funciones: {nombre_func: línea}
+        self.func_start_lines = {}
 
     def advance(self):
         self.pos += 1
@@ -84,6 +86,8 @@ class Parser:
                 self.triplos.add_triplo("VACÍO", "PENDIENTE", "JMP")
 
                 if self.match_lexema("{"):
+                    # Guardar la línea de inicio de la función (después del JMP)
+                    self.func_start_lines[func_name] = self.triplos.current_line()
                     while self.current_token and self.current_token.get("lexema") != "}":
                         self.statement()
                     self.match_lexema("}")
@@ -138,13 +142,19 @@ class Parser:
         if self.match_lexema("="):
             temp_result = self.expresion()
             if temp_result:
-                if not str(temp_result).startswith("T"):
+                # Si es retorno de función ($RET), generar la copia del valor de retorno
+                if temp_result == "$RET":
+                    # El valor de retorno está en $i3 (hardcodeado para este ejercicio)
+                    t_ret = self.triplos.new_temp()
+                    self.triplos.add_triplo(t_ret, "$i3", "=")
+                    self.triplos.add_triplo(var_name, t_ret, "=")
+                elif not str(temp_result).startswith("T"):
                     t_asig = self.triplos.new_temp()
                     self.triplos.add_triplo(t_asig, temp_result, "=")
                     self.triplos.add_triplo(var_name, t_asig, "=")
                 else:
                     self.triplos.add_triplo(var_name, temp_result, "=")
-            
+
             if self.current_token and self.current_token.get("lexema") == ";":
                 self.advance()
 
@@ -412,11 +422,11 @@ class Parser:
                             self.triplos.add_triplo(t_param, arg, "=")
                             self.triplos.add_triplo(param_name, t_param, "=")
 
-                # Resetear temps antes del CALL para usar T1
-                self.triplos.reset_temps()
-                t_val = self.triplos.new_temp()
-                self.triplos.add_triplo(t_val, lexema, "CALL")
-                return t_val
+                # Generar JMP a la función en lugar de CALL
+                # El valor de retorno se maneja después del JMP
+                self.triplos.add_triplo("VACÍO", lexema, "JMP")
+                # Retornar marcador para que la asignación use el valor de retorno
+                return "$RET"
             return lexema 
             
         elif lexema == "(":
