@@ -110,7 +110,14 @@ class Parser:
                     self.triplos.reset_temps()
                     temp_result = self.expresion()
                     if temp_result:
-                        if not str(temp_result).startswith("T"):
+                        # Si es retorno de función, usar el nombre de la función como fuente
+                        if isinstance(temp_result, tuple) and temp_result[0] == "FUNC_RET":
+                            func_name = temp_result[1]
+                            self.triplos.reset_temps()
+                            t_ret = self.triplos.new_temp()
+                            self.triplos.add_triplo(t_ret, func_name, "=")
+                            self.triplos.add_triplo(var_name, t_ret, "=")
+                        elif not str(temp_result).startswith("T"):
                             t_asig = self.triplos.new_temp()
                             self.triplos.add_triplo(t_asig, temp_result, "=")
                             self.triplos.add_triplo(var_name, t_asig, "=")
@@ -142,12 +149,13 @@ class Parser:
         if self.match_lexema("="):
             temp_result = self.expresion()
             if temp_result:
-                # Si es retorno de función ($RET), generar la copia del valor de retorno
-                if temp_result == "$RET":
+                # Si es retorno de función, usar el nombre de la función como fuente
+                if isinstance(temp_result, tuple) and temp_result[0] == "FUNC_RET":
+                    func_name = temp_result[1]
                     # Resetear temps para usar T1
                     self.triplos.reset_temps()
                     t_ret = self.triplos.new_temp()
-                    self.triplos.add_triplo(t_ret, "$i3", "=")
+                    self.triplos.add_triplo(t_ret, func_name, "=")
                     self.triplos.add_triplo(var_name, t_ret, "=")
                 elif not str(temp_result).startswith("T"):
                     t_asig = self.triplos.new_temp()
@@ -380,7 +388,11 @@ class Parser:
 
     def expresion(self):
         temp_izq = self.termino()
-        
+
+        # Si es retorno de función, retornarlo directamente sin procesar
+        if isinstance(temp_izq, tuple) and temp_izq[0] == "FUNC_RET":
+            return temp_izq
+
         if self.current_token and self.current_token.get("lexema") in ["+", "-"]:
             if not str(temp_izq).startswith("T"):
                 nuevo_t = self.triplos.new_temp()
@@ -392,12 +404,16 @@ class Parser:
                 self.advance()
                 temp_der = self.termino()
                 self.triplos.add_triplo(temp_izq, temp_der, op)
-                
+
         return temp_izq
 
     def termino(self):
         temp_izq = self.factor()
-        
+
+        # Si es retorno de función, retornarlo directamente sin procesar
+        if isinstance(temp_izq, tuple) and temp_izq[0] == "FUNC_RET":
+            return temp_izq
+
         if self.current_token and self.current_token.get("lexema") in ["*", "/"]:
             if not str(temp_izq).startswith("T"):
                 nuevo_t = self.triplos.new_temp()
@@ -409,7 +425,7 @@ class Parser:
                 self.advance()
                 temp_der = self.factor()
                 self.triplos.add_triplo(temp_izq, temp_der, op)
-                
+
         return temp_izq
 
     def factor(self):
@@ -449,8 +465,8 @@ class Parser:
                 # Generar JMP a la función usando la línea de inicio
                 func_start = self.func_start_lines.get(lexema, 0)
                 self.triplos.add_triplo("VACÍO", func_start, "JMP")
-                # Retornar marcador para que la asignación use el valor de retorno
-                return "$RET"
+                # Retornar marcador con el nombre de la función para el valor de retorno
+                return ("FUNC_RET", lexema)
             return lexema 
             
         elif lexema == "(":
