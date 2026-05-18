@@ -49,7 +49,7 @@ class SemanticAnalyzer:
             ('REAL', r'\b\d+\.\d+\b'),
             ('ENTERO', r'\b\d+\b'),
             ('TIPO', r'\b(?:One|Two|Tree)\b'),
-            ('FOR', r'\bfor\b'),
+            ('FOR', r'\b(?:for|For|FOR)\b'),
             ('RETURN', r'\b[Rr]eturn\b'),
             ('FUNC', r'\$[a-zA-Z_][a-zA-Z0-9_]*(?=\s*\()'),
             ('ID', r'\$[A-Za-z0-9]+'),
@@ -71,6 +71,7 @@ class SemanticAnalyzer:
             hubo_asignacion = False
             id_izquierdo = None
             hubo_return = False
+            hubo_for = False
 
             for tipo_token, lexema in tokens_linea:
                 if tipo_token == 'TIPO':
@@ -78,6 +79,11 @@ class SemanticAnalyzer:
                 
                 elif tipo_token == 'RETURN':
                     hubo_return = True
+                
+                elif tipo_token == 'FOR':
+                    hubo_for = True
+                    # Crear un nuevo scope para el FOR loop
+                    self._push_scope()
 
                 elif tipo_token == 'LLAVE_ABRE':
                     if self._esperando_llave_funcion:
@@ -97,6 +103,9 @@ class SemanticAnalyzer:
                             self._pop_scope()
                             self.funcion_actual = None
                         # Si depth > 0, solo se cierra un for/if anidado
+                    else:
+                        # Llave que cierra un FOR loop (fuera de función)
+                        self._pop_scope()
                     
                 elif tipo_token == 'FUNC':
                     if tipo_declaracion:
@@ -126,6 +135,8 @@ class SemanticAnalyzer:
                             self.eh.add(lexema, num_linea, "Variable duplicada")
                         else:
                             self._declare_in_current_scope(lexema)
+                        # Resetear tipo_declaracion después de declarar
+                        tipo_declaracion = None
                     else:
                         if not self._is_declared_in_any_scope(lexema) and tipo_en_tabla == "":
                             # Variable indefinida (no fue declarada en ningún scope)
@@ -138,7 +149,9 @@ class SemanticAnalyzer:
                         id_izquierdo = lexema
 
                 elif tipo_token == 'PALABRA_ERR':
-                    self.eh.add(lexema, num_linea, "Variable indefinida (sin $)")
+                    # Solo reportar error si no es una palabra reservada mal capitalizada
+                    if not hubo_for:  # Ya lo manejamos arriba
+                        self.eh.add(lexema, num_linea, "Variable indefinida (sin $)")
 
                 elif tipo_token == 'ASIGNACION':
                     hubo_asignacion = True
